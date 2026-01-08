@@ -1,0 +1,38 @@
+﻿# deps
+node_modules/
+.pnp/
+.pnp.js
+
+# build
+dist/
+build/
+.out/
+.next/
+coverage/
+
+# env
+.env
+.env.*
+*.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Expo / React Native
+.expo/
+.expo-shared/
+*.jks
+*.keystore
+
+# backend uploads / temp
+backend/uploads/
+tmp/
+temp/
