@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 Int                 @id @default(autoincrement())
+  name               String
+  email              String              @unique
+  password           String
+  createdAt          DateTime            @default(now())
+  isVerified         Boolean             @default(false)
+  accounts           Account[]
+  emailVerifications EmailVerification[]
+  groups             GroupMember[]
+  notifications      Notification[]
+  records            Record[]
+  splitsPaid         Split[]             @relation("PaidBy")
+  splitParticipants  SplitParticipant[]
+  unclassifiedNotes  UnclassifiedNote[]
+}
+
+model EmailVerification {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email, createdAt])
+  @@index([userId], map: "EmailVerification_userId_fkey")
+}
+
+model Account {
+  id           Int      @id @default(autoincrement())
+  name         String
+  kind         String   @default("cash")
+  balance      Float    @default(0)
+  limitAmount  Float?
+  allowanceDay Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  records      Record[]
+
+  @@index([userId], map: "Account_userId_fkey")
+}
+
+model GroupModel {
+  id        Int           @id @default(autoincrement())
+  name      String
+  joinCode  String?       @unique
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  members   GroupMember[]
+  records   Record[]
+  splits    Split[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id      Int        @id @default(autoincrement())
+  userId  Int
+  groupId Int
+  role    String     @default("member")
+  group   GroupModel @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([groupId], map: "GroupMember_groupId_fkey")
+}
+
+model Record {
+  id            Int         @id @default(autoincrement())
+  amount        Float
+  note          String?
+  category      String?
+  quantity      Int?        @default(1)
+  image         String?
+  paymentMethod String?
+  createdAt     DateTime    @default(now())
+  userId        Int
+  accountId     Int?
+  groupId       Int?
+  account       Account?    @relation(fields: [accountId], references: [id])
+  group         GroupModel? @relation(fields: [groupId], references: [id])
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([accountId], map: "Record_accountId_fkey")
+  @@index([groupId], map: "Record_groupId_fkey")
+  @@index([userId], map: "Record_userId_fkey")
+}
+
+model Split {
+  id           Int               @id @default(autoincrement())
+  amount       Float
+  description  String?
+  dueType      String
+  settled      Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  // 關聯
+  paidById     Int?
+  groupId      Int?
+  paidBy       User?             @relation("PaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+  group        GroupModel?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  participants SplitParticipant[]
+
+  // 🟢 外幣欄位
+  originalAmount   Float?
+  originalCurrency String?
+  exchangeRate     Float?
+
+  @@map("splits")  
+}
+
+model SplitParticipant {
+  id      Int     @id @default(autoincrement())
+  splitId Int
+  userId  Int
+  amount  Float
+  settled Boolean @default(false)
+  split   Split   @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([splitId], map: "SplitParticipant_splitId_fkey")
+  @@index([userId], map: "SplitParticipant_userId_fkey")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "Notification_userId_fkey")
+}
+
+model OcrKeyword {
+  id        Int      @id @default(autoincrement())
+  keyword   String
+  category  String
+  createdAt DateTime @default(now())
+}
+
+model UnclassifiedNote {
+  id        Int      @id @default(autoincrement())
+  note      String
+  createdAt DateTime @default(now())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "UnclassifiedNote_userId_fkey")
+}
